@@ -27,7 +27,7 @@ if [ -n "$MAXMINDDB_LICENSE_KEY" ]; then
 	echo "Maxmind license key found. Applying weekly cron job."
   cp /etc/geoip.sh /goaccess/geoip.sh
   chmod +x /goaccess/geoip.sh
-  echo -e '* * * * * cd /goaccess && ./geoip.sh >> /config/data/cron/cron.log 2>&1' > /var/spool/cron/crontabs/root
+  echo -e '0 0 * * SUN cd /goaccess && ./geoip.sh >> /config/data/cron/cron.log 2>&1' > /var/spool/cron/crontabs/root
   echo "Using Maxmind license key: ${MAXMINDDB_LICENSE_KEY}"
   echo "Weekly cron job applied. It runs every Sunday at 00:00."
   /sbin/tini -s -- /usr/sbin/crond -b
