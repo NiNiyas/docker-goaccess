@@ -1,0 +1,35 @@
+#!/usr/bin/with-contenv bash
+
+PUID=${PUID:-911}
+PGID=${PGID:-911}
+
+groupmod -o -g "$PGID" goaccess
+usermod -o -u "$PUID" goaccess
+
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+User uid:    $(id -u goaccess)
+User gid:    $(id -g goaccess)
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+"
+
+time32="$(date +%Y)"
+
+if [[ "${time32}" == "1970" || "${time32}" == "1969" ]] && [ "$(uname -m)" == "armv7l" ]; then
+  echo '
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Your DockerHost is running an outdated version of libseccomp
+
+To fix this, please visit https://docs.linuxserver.io/faq#libseccomp
+
+Apps will not behave correctly without this
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+'
+sleep infinity
+fi
+
+chown -R goaccess:goaccess /opt/log
+chown -R goaccess:goaccess /config
+chmod -R 777 /opt/log
+chmod -R 777 /config
