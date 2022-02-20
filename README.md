@@ -41,6 +41,7 @@ services:
     #  dockerfile: Dockerfile                  # - If you want to build.
     #  args:                                   #
     #      MAXMIND_LICENSE_KEY: <license-key>  # 
+    #      OVERLAY_ARCH:                       #
 	image: niniyas/docker-goaccess:amd64 | arm64 | armv7
     ports:
       - 7889:7889
