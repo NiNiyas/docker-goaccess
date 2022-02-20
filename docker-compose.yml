@@ -6,7 +6,8 @@ services:
     #  context: .                              #
     #  dockerfile: Dockerfile                  # - If you want to build.
     #  args:                                   #
-    #      maxmind_license_key: <license-key>  #
+    #      MAXMIND_LICENSE_KEY: <license-key>  #
+    #      OVERLAY_ARCH:                       #
     ports:
       - 7889:7889
     volumes:
@@ -15,5 +16,7 @@ services:
     environment:
       - MAXMINDDB_LICENSE_KEY=<license-key>
       - TZ=Europe/Brussels
-      - TINI_VERBOSITY=0 # If you want to supress TINI outputs.
-    image: niniyas/docker-goaccess:latest # or niniyas/goaccess:latest if you want smaller image (~6mb). [DockerHub](https://hub.docker.com/r/niniyas/goaccess)
+      - TINI_VERBOSITY=0
+      - PUID=1000
+      - PGID=1000
+    image: niniyas/docker-goaccess:amd64 | arm64 | armv7
