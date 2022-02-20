@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [Build and Push to Docker Hub]
+  push:
+    branches:
+      - master
 
 jobs:
   build-and-push-to-docker-hub:
