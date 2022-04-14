@@ -3,7 +3,8 @@
 set -e
 
 echo -e "Variables set:\\n\
-TZ=${TZ}"
+TZ=${TZ}
+INCLUDE_ALL_LOGS=${INCLUDE_ALL_LOGS}"
 
 # create necessary config dirs if not present
 mkdir -p /config/html
@@ -17,7 +18,6 @@ mkdir -p /opt/log
 
 # create an empty access.log file so goaccess does not crash if not exist
 [ -f /opt/log/access.log ] || touch /opt/log/access.log
-[ -f /opt/log/access.log.1 ] || touch /opt/log/access.log.1
 
 /sbin/tini -s -- nginx -c /opt/nginx.conf
 
@@ -29,7 +29,12 @@ if [ -n "$MAXMIND_LICENSE_KEY" ]; then
   echo "Weekly cron job applied. It runs every Sunday at 00:00."
   /sbin/tini -s -- /usr/sbin/crond -b
 else
-  echo MAXMIND_LICENSE_KEY variable not found. GeoIP2 db will not update weekly.
+  echo MAXMIND_LICENSE_KEY variable not set. GeoIP2 db will not update.
 fi
 
-/sbin/tini -s -- zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+if [ "${INCLUDE_ALL_LOGS:-false}" = true ]; then
+    [ -f /opt/log/access.log.1 ] || touch /opt/log/access.log.1
+    /sbin/tini -s -- zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+  else
+    /sbin/tini -s -- goaccess - /opt/log/access.log --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+fi

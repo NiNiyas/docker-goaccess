@@ -19,4 +19,5 @@ services:
       - TINI_VERBOSITY=0
       - PUID=1000
       - PGID=1000
+      - INCLUDE_ALL_LOGS=false
     image: niniyas/docker-goaccess:amd64 | arm64 | armv7
