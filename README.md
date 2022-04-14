@@ -54,7 +54,7 @@ services:
       - MAXMIND_LICENSE_KEY=<license-key>
       - TZ=Europe/Brussels
       - TINI_VERBOSITY=0
-	    - INCLUDE_ALL_LOGS=false
+      - INCLUDE_ALL_LOGS=false
 ```
 
 ## Variables
