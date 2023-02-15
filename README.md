@@ -30,7 +30,7 @@ websockets through nginx, allowing GoAccess content to be viewed without any oth
 ## docker run
 
 ```
-docker run -d --name GoAccess -p 7889:7889 -e MAXMINDDB_LICENSE_KEY=<license-key> -e TZ=Europe/Brussels -e PUID=1000 -e PGID= 1000 -e - INCLUDE_ALL_LOGS=false -v /path/to/host/nginx/logs:/opt/log -v /path/to/goaccess/storage:/config niniyas/docker-goaccess:amd64 | arm64 | armv7
+docker run -d --name GoAccess -p 7889:7889 -e MAXMINDDB_LICENSE_KEY=<license-key> -e TZ=Europe/Brussels -e PUID=1000 -e PGID= 1000 -v /path/to/host/nginx/logs:/opt/log -v /path/to/goaccess/storage:/config niniyas/docker-goaccess:amd64 | arm64 | armv7
 ```
 
 ## docker compose
@@ -57,7 +57,6 @@ services:
       - UMASK=022
       - MAXMIND_LICENSE_KEY=<license-key>
       - TZ=Europe/Brussels
-      - INCLUDE_ALL_LOGS=false
 ```
 
 ## Variables
