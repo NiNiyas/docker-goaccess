@@ -74,7 +74,7 @@ services:
 - Umask
     - [Wiki](https://en.wikipedia.org/wiki/Umask). Optional
 - TINI_VERBOSITY
-    - Set to `0` if you want to don't want supress tini output. Default is `0`. Optional
+    - Set to `1` if you want to don't want supress tini output. Default is `0`. Optional
 - INCLUDE_ALL_LOGS
     - Include all logs under `/opt/log` such as `.gz` and `access.log.*` files. true|false. Default is `false`. Optional
 
