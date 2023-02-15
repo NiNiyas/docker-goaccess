@@ -1,3 +1,0 @@
-#!/bin/bash
-
-docker build --build-arg maxmind_license_key=$MAXMIND_LICENSE_KEY --build-arg OVERLAY_ARCH=$OVERLAY_ARCH -f $DOCKERFILE_PATH -t $IMAGE_NAME .

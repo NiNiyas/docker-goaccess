@@ -1,15 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
-
-echo -e "Variables set:\\n\
-TZ=${TZ}
-INCLUDE_ALL_LOGS=${INCLUDE_ALL_LOGS}"
 
 # create necessary config dirs if not present
 mkdir -p /config/html
 mkdir -p /config/data
 mkdir -p /config/data/cron
+mkdir -p /config/GeoIP
 mkdir -p /opt/log
 
 # copy default goaccess config if not present
@@ -24,17 +21,29 @@ mkdir -p /opt/log
 if [ -n "$MAXMIND_LICENSE_KEY" ]; then
   cp /etc/geoip.sh /goaccess/geoip.sh
   chmod +x /goaccess/geoip.sh
-  echo -e '0 0 * * SUN cd /goaccess && ./geoip.sh >> /config/data/cron/cron.log 2>&1' > /var/spool/cron/crontabs/root
-  echo "Using Maxmind license key: ${MAXMIND_LICENSE_KEY}"
+  if [ ! -f "/config/GeoIP/GeoLite2-City.mmdb" ]; then
+    if [ ! -f "/config/GeoIP/GeoLite2-ASN.mmdb" ]; then
+      /bin/bash /goaccess/geoip.sh >>/config/GeoIP/cron.log 2>&1
+    fi
+  fi
+  if ! grep -q "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf; then
+    echo "geoip-database /config/GeoIP/GeoLite2-City.mmdb" >> /config/goaccess.conf
+    echo "geoip-database /config/GeoIP/GeoLite2-ASN.mmdb" >> /config/goaccess.conf
+  fi
+  echo -e '0 0 * * SUN cd /goaccess && ./geoip.sh >> /config/GeoIP/cron.log 2>&1' >/var/spool/cron/crontabs/root
   echo "Weekly cron job applied. It runs every Sunday at 00:00."
   /sbin/tini -s -- /usr/sbin/crond -b
 else
-  echo MAXMIND_LICENSE_KEY variable not set. GeoIP2 db will not update.
+  if grep -q "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf; then
+    grep -v "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf >tmpfile && mv tmpfile /config/goaccess.conf
+    grep -v "geoip-database /config/GeoIP/GeoLite2-ASN.mmdb" /config/goaccess.conf >tmpfile && mv tmpfile /config/goaccess.conf
+  fi
+  echo "MAXMIND_LICENSE_KEY variable not set. GeoIP2 databases will not auto update."
 fi
 
 if [ "${INCLUDE_ALL_LOGS:-false}" = true ]; then
-    [ -f /opt/log/access.log.1 ] || touch /opt/log/access.log.1
-    /sbin/tini -s -- zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
-  else
-    /sbin/tini -s -- goaccess - /opt/log/access.log --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+  [ -f /opt/log/access.log.1 ] || touch /opt/log/access.log.1
+  /sbin/tini -s -- zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+else
+  /sbin/tini -s -- goaccess - /opt/log/access.log --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
 fi

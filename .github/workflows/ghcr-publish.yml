@@ -46,7 +46,6 @@ jobs:
             ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:amd64_commit-${{ steps.short-sha.outputs.sha }}
           platforms: linux/amd64
           build-args: |
-            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
             OVERLAY_ARCH=amd64
 
       - name: Build and push
@@ -61,7 +60,6 @@ jobs:
             ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:arm64_commit-${{ steps.short-sha.outputs.sha }}
           platforms: linux/arm64
           build-args: |
-            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
             OVERLAY_ARCH=aarch64
 
       - name: Build and push
@@ -76,7 +74,6 @@ jobs:
             ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:armv7_commit-${{ steps.short-sha.outputs.sha }}
           platforms: linux/arm/v7
           build-args: |
-            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
             OVERLAY_ARCH=arm
 
       - name: ntfy success notifications
