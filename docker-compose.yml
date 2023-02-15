@@ -6,18 +6,16 @@ services:
     #  context: .                              #
     #  dockerfile: Dockerfile                  # - If you want to build.
     #  args:                                   #
-    #      MAXMIND_LICENSE_KEY: <license-key>  #
     #      OVERLAY_ARCH:                       #
+    image: niniyas/docker-goaccess:amd64 | arm64 | armv7
     ports:
       - 7889:7889
     volumes:
       - .config:/config
       - .goaccess/logs:/opt/log
     environment:
-      - MAXMINDDB_LICENSE_KEY=<license-key>
-      - TZ=Europe/Brussels
-      - TINI_VERBOSITY=0
       - PUID=1000
       - PGID=1000
-      - INCLUDE_ALL_LOGS=false
-    image: niniyas/docker-goaccess:amd64 | arm64 | armv7
+      - UMASK=022
+      - MAXMIND_LICENSE_KEY=<license-key>
+      - TZ=Europe/Brussels
