@@ -2,11 +2,6 @@
 
 Based on [GregYankovoy/docker-goaccess](https://github.com/GregYankovoy/docker-goaccess)
 
-If you want unmodified GoAccess build,
-see [Github](https://github.com/NiNiyas/goaccess), [DockerHub](https://hub.docker.com/r/niniyas/goaccess). Available
-for `amd64, arm/v7, arm64`.
-It is much smaller in terms of size.
-
 This is an Alpine linux container which builds GoAccess including GeoIP. It reverse proxies the GoAccess HTML files and
 websockets through nginx, allowing GoAccess content to be viewed without any other setup.
 
@@ -19,6 +14,11 @@ websockets through nginx, allowing GoAccess content to be viewed without any oth
 
 ## Supported Architectures
 
+Simply pulling `ghcr.io/niniyas/docker-goaccess:latest` should retrieve the correct image for your arch, but you can
+also pull specific arch images via tags.
+
+Also available on [quay](https://quay.io/niniyas/docker-goaccess) `quay.io/niniyas/docker-goaccess:latest`
+
 | Architecture | Tag   |
 |--------------|-------|
 | x86-64       | amd64 |
@@ -30,7 +30,7 @@ websockets through nginx, allowing GoAccess content to be viewed without any oth
 ## docker run
 
 ```
-docker run -d --name GoAccess -p 7889:7889 -e MAXMINDDB_LICENSE_KEY=<license-key> -e TZ=Europe/Brussels -e PUID=1000 -e PGID= 1000 -v /path/to/host/nginx/logs:/opt/log -v /path/to/goaccess/storage:/config niniyas/docker-goaccess:amd64 | arm64 | armv7
+docker run -d --name GoAccess -p 7889:7889 -e MAXMINDDB_LICENSE_KEY=<license-key> -e TZ=Europe/Brussels -e PUID=1000 -e PGID= 1000 -v /path/to/host/nginx/logs:/opt/log -v /path/to/goaccess/storage:/config ghcr.io/niniyas/docker-goaccess:latest
 ```
 
 ## docker compose
@@ -45,7 +45,7 @@ services:
     #  dockerfile: Dockerfile                  # - If you want to build.
     #  args:                                   #
     #      OVERLAY_ARCH:                       #
-    image: niniyas/docker-goaccess:amd64 | arm64 | armv7
+    image: ghcr.io/niniyas/docker-goaccess:latest
     ports:
       - 7889:7889
     volumes:

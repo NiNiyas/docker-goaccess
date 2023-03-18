@@ -7,9 +7,9 @@ services:
     #  dockerfile: Dockerfile                  # - If you want to build.
     #  args:                                   #
     #      OVERLAY_ARCH:                       #
-    image: niniyas/docker-goaccess:amd64 | arm64 | armv7
+    image: ghcr.io/niniyas/docker-goaccess:latest
     ports:
-      - 7889:7889
+      - "7889:7889"
     volumes:
       - .config:/config
       - .goaccess/logs:/opt/log
