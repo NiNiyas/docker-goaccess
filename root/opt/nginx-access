@@ -1,0 +1,11 @@
+# From https://www.osetc.com/en/how-to-install-and-configure-logrotate-on-alpine-linux.html
+/config/nginx/logs/access.log {
+  su goaccess goaccess
+  maxsize 5M
+  rotate 7
+  copytruncate
+  daily
+  compress
+  missingok
+  notifempty
+}

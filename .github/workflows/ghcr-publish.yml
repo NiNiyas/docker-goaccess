@@ -49,7 +49,7 @@ jobs:
             ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:amd64_commit-${{ steps.short-sha.outputs.sha }}
           platforms: linux/amd64
           build-args: |
-            OVERLAY_ARCH=amd64
+            OVERLAY_ARCH=x86_64
 
       - name: Build and push arm64
         uses: docker/build-push-action@v5.1.0
@@ -65,25 +65,11 @@ jobs:
           build-args: |
             OVERLAY_ARCH=aarch64
 
-      - name: Build and push armv7
-        uses: docker/build-push-action@v5.1.0
-        with:
-          context: ./
-          file: ./Dockerfile
-          push: true
-          provenance: false
-          tags: |
-            ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:armv7
-            ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:armv7_commit-${{ steps.short-sha.outputs.sha }}
-          platforms: linux/arm/v7
-          build-args: |
-            OVERLAY_ARCH=arm
-
       - name: Create and push manifest images
         uses: Noelware/docker-manifest-action@master
         with:
           inputs: ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:latest
-          images: ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:amd64,ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:arm64,ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:armv7
+          images: ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:amd64,ghcr.io/${{ secrets.GIT_USER }}/docker-goaccess:arm64
           push: true
 
       - name: ntfy success notifications

@@ -1,45 +1,39 @@
 FROM alpine:latest
 
-ARG build_deps="build-base ncurses-dev autoconf automake git gettext-dev libmaxminddb-dev"
-ARG runtime_deps="nginx tini ncurses libintl libmaxminddb tzdata wget bash shadow grep sed"
+WORKDIR /usr/src/app
 
 ARG OVERLAY_ARCH
-ARG OVERLAY_VERSION=v2.2.0.3
+ARG OVERLAY_VERSION=3.2.1.0
+ARG GOACCESS_VERSION=1.9.4
 
 ENV CONFIG_DIR="/config" \
     PUID="1000" \
     PGID="1000" \
     UMASK="002" \
-    ON_DOCKER=True \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    TINI_VERBOSITY=0 \
-    TZ=Europe/Brussels \
-    INCLUDE_ALL_LOGS=false
+    TZ=Europe/Brussels
 
-WORKDIR /goaccess
-
-# Build goaccess with mmdb geoip
-RUN wget -q -O - https://github.com/allinurl/goaccess/archive/refs/heads/master.tar.gz | tar --strip 1 -xzf - && \
-    apk add --update --no-cache ${build_deps} && \
+RUN apk update && \
+    apk add --no-cache --virtual=build-deps build-base ncurses-dev autoconf automake git gettext-dev libmaxminddb-dev && \
+    apk add --no-cache nginx tzdata wget bash shadow grep sed findutils curl xz gawk gzip supercronic logrotate && \
+    wget -O - https://github.com/allinurl/goaccess/archive/refs/tags/v${GOACCESS_VERSION}.tar.gz | tar --strip 1 -xzf - && \
     autoreconf -fiv && \
     ./configure --enable-utf8 --enable-geoip=mmdb && \
     make && \
     make install && \
-    rm -rf /tmp/goaccess/* /goaccess && \
-    apk del --purge $build_deps
-
-# Get necessary runtime dependencies and set up configuration
-RUN apk add --update --no-cache ${runtime_deps}
+    rm -rf /tmp/goaccess/* /goaccess
 
 COPY /root /
 
-RUN chmod +x /usr/local/bin/goaccess.sh
+RUN chmod +x /usr/local/bin/goaccess.sh && \
+    chmod +x /etc/geoip.sh && \
+    cp /opt/nginx-access /etc/logrotate.d/nginx-access && \
+    cp /opt/nginx-error /etc/logrotate.d/nginx-error
 
-# add s6 overlay from https://github.com/linuxserver/docker-baseimage-alpine
-ADD https://github.com/just-containers/s6-overlay/releases/download/${OVERLAY_VERSION}/s6-overlay-${OVERLAY_ARCH}-installer /tmp/
-RUN chmod +x /tmp/s6-overlay-${OVERLAY_ARCH}-installer && \
-    /tmp/s6-overlay-${OVERLAY_ARCH}-installer / && \
-    rm /tmp/s6-overlay-${OVERLAY_ARCH}-installer
+RUN curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${OVERLAY_VERSION}/s6-overlay-noarch.tar.xz | tar Jpxf - -C / && \
+    curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${OVERLAY_VERSION}/s6-overlay-${OVERLAY_ARCH}.tar.xz | tar Jpxf - -C / && \
+    curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${OVERLAY_VERSION}/s6-overlay-symlinks-noarch.tar.xz  | tar Jpxf - -C / && \
+    curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${OVERLAY_VERSION}/s6-overlay-symlinks-arch.tar.xz | tar Jpxf - -C /
 
 RUN useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false goaccess && \
     usermod -G users goaccess
@@ -47,13 +41,10 @@ RUN useradd -u 1000 -U -d "${CONFIG_DIR}" -s /bin/false goaccess && \
 EXPOSE 7889
 VOLUME [ "/config", "/opt/log" ]
 
-LABEL GITHUB=https://github.com/NiNiyas/docker-goaccess
-LABEL MAINTAINER=NiNiyas
-LABEL FORKED_FROM=https://github.com/GregYankovoy/docker-goaccess
-LABEL org.opencontainers.image.source=https://github.com/NiNiyas/docker-goaccess
-
 HEALTHCHECK --interval=30s --timeout=60s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:7889 || exit 1
 
-CMD ["/sbin/tini", "-v", "--", "/usr/local/bin/goaccess.sh"]
+LABEL org.opencontainers.image.source="https://github.com/NiNiyas/docker-goaccess"
+LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
+
 ENTRYPOINT ["/init"]

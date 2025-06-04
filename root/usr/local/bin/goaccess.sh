@@ -2,48 +2,49 @@
 
 set -e
 
-# create necessary config dirs if not present
 mkdir -p /config/html
 mkdir -p /config/data
-mkdir -p /config/data/cron
-mkdir -p /config/GeoIP
+mkdir -p /config/nginx
+mkdir -p /config/nginx/logs
 mkdir -p /opt/log
 
-# copy default goaccess config if not present
 [ -f /config/goaccess.conf ] || cp /opt/goaccess.conf /config/goaccess.conf
 [ -f /config/browsers.list ] || cp /opt/browsers.list /config/browsers.list
 
-# create an empty access.log file so goaccess does not crash if not exist
-[ -f /opt/log/access.log ] || touch /opt/log/access.log
-
-/sbin/tini -s -- nginx -c /opt/nginx.conf
-
-if [ -n "$MAXMIND_LICENSE_KEY" ]; then
-  cp /etc/geoip.sh /goaccess/geoip.sh
-  chmod +x /goaccess/geoip.sh
-  if [ ! -f "/config/GeoIP/GeoLite2-City.mmdb" ]; then
-    if [ ! -f "/config/GeoIP/GeoLite2-ASN.mmdb" ]; then
-      /bin/bash /goaccess/geoip.sh >>/config/GeoIP/cron.log 2>&1
-    fi
-  fi
-  if ! grep -q "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf; then
-    echo "geoip-database /config/GeoIP/GeoLite2-City.mmdb" >> /config/goaccess.conf
-    echo "geoip-database /config/GeoIP/GeoLite2-ASN.mmdb" >> /config/goaccess.conf
-  fi
-  echo -e '0 0 * * SUN cd /goaccess && ./geoip.sh >> /config/GeoIP/cron.log 2>&1' >/var/spool/cron/crontabs/root
-  echo "Weekly cron job applied. It runs every Sunday at 00:00."
-  /sbin/tini -s -- /usr/sbin/crond -b
-else
-  if grep -q "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf; then
-    grep -v "geoip-database /config/GeoIP/GeoLite2-City.mmdb" /config/goaccess.conf >tmpfile && mv tmpfile /config/goaccess.conf
-    grep -v "geoip-database /config/GeoIP/GeoLite2-ASN.mmdb" /config/goaccess.conf >tmpfile && mv tmpfile /config/goaccess.conf
-  fi
-  echo "MAXMIND_LICENSE_KEY variable not set. GeoIP2 databases will not auto update."
+if [ ! -e "/opt/log/access.log" ]; then
+    echo -e "\e[31m/opt/log/access.log does not exist. Exiting..\e[0m"
+    exit 1
 fi
 
-if [ "${INCLUDE_ALL_LOGS:-false}" = true ]; then
-  [ -f /opt/log/access.log.1 ] || touch /opt/log/access.log.1
-  /sbin/tini -s -- zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+echo -e '0 0 * * * /usr/sbin/logrotate -s /config/logrotate.status --force --verbose /etc/logrotate.conf\n' >> /tmp/cron
+
+if [ -n "$MAXMIND_LICENSE_KEY" ]; then
+  mkdir -p /config/geoip
+  if [ ! -f "/config/geoip/GeoLite2-City.mmdb" ] || [ ! -f "/config/geoip/GeoLite2-ASN.mmdb" ]; then
+    echo -e "\e[32mDownloading geoip databases.\e[0m"
+    /etc/geoip.sh >> /config/geoip/geoip.log 2>&1
+  fi
+  if ! grep -q "geoip-database /config/geoip/GeoLite2-City.mmdb" /config/goaccess.conf; then
+    echo "geoip-database /config/geoip/GeoLite2-City.mmdb" >> /config/goaccess.conf
+    echo "geoip-database /config/geoip/GeoLite2-ASN.mmdb" >> /config/goaccess.conf
+  fi
+  echo -e '0 0 * * SUN /etc/geoip.sh >> /config/geoip/geoip.log 2>&1' >> /tmp/cron
+  echo -e "\e[32mWeekly cron job to update geoip databases have been applied.\e[0m"
 else
-  /sbin/tini -s -- goaccess - /opt/log/access.log --output /config/html/index.html --real-time-html --log-format=COMBINED --port 7890 --config-file=/config/goaccess.conf --ws-url ws://localhost:7890/ws
+  if grep -q "geoip-database /config/geoip/GeoLite2-City.mmdb" /config/goaccess.conf; then
+    grep -v "geoip-database /config/geoip/GeoLite2-City.mmdb" /config/goaccess.conf >/config/tmpfile && mv /config/tmpfile /config/goaccess.conf
+    grep -v "geoip-database /config/geoip/GeoLite2-ASN.mmdb" /config/goaccess.conf >/config/tmpfile && mv /config/tmpfile /config/goaccess.conf
+  fi
+fi
+
+nohup supercronic /tmp/cron >> /config/cron.log 2>&1 &
+nginx -p /config/nginx -c /opt/nginx.conf &
+
+run_args="--config-file=/config/goaccess.conf"
+
+if [ "${INCLUDE_ALL_LOGS:-false}" = true ]; then
+  echo -e "\e[33mINCLUDE_ALL_LOGS is enabled. This will likely cause increased memory and cpu usage based on the volume and size of your logs.\e[0m"
+  zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 $run_args
+else
+  goaccess - /opt/log/access.log $run_args
 fi

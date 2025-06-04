@@ -95,7 +95,6 @@ PetalBot								Crawlers
 Discordbot								Crawlers
 ZoominfoBot								Crawlers
 Googlebot								Crawlers
-DotBot									Crawlers
 AhrefsBot								Crawlers
 SemrushBot								Crawlers
 Adsbot									Crawlers
@@ -107,6 +106,8 @@ MJ12bot									Crawlers
 Pandalytics								Crawlers
 YandexBot								Crawlers
 Nimbostratus-Bot							Crawlers
+SeznamBot								Crawlers
+AppleBot								Crawlers
 
 Vienna									Feeds
 Windows-RSS-Platform							Feeds
