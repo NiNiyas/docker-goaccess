@@ -1,125 +1,66 @@
 #!/bin/bash
 
-DOWNLOAD_URL_CITY="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=$MAXMIND_LICENSE_KEY&suffix=tar.gz"
-DOWNLOAD_URL_ASN="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=$MAXMIND_LICENSE_KEY&suffix=tar.gz"
-FILE_NAME_CITY="GeoLite2-City.tar.gz"
-FILE_NAME_ASN="GeoLite2-ASN.tar.gz"
-
 TEMP_FOLDER="/tmp/geoip_temp"
-mkdir -p "${TEMP_FOLDER}"
 
-if [ -f "/config/geoip/GeoLite2-City.mmdb" ]; then
-  CURRENT_SHA_CITY=$(sha256sum /config/geoip/GeoLite2-City.mmdb | awk '{ print $1 }')
-  echo "---------------------------------------------------"
-  echo "Updating GeoLite2-City.mmdb"
-  echo "Current GeoLite2-City.mmdb SHA256: ${CURRENT_SHA_CITY}"
-  if ! wget "${DOWNLOAD_URL_CITY}" -O "/config/geoip/${FILE_NAME_CITY}" &>/dev/null; then
-    echo "Error downloading GeoLite2-City.mmdb"
-    echo "---------------------------------------------------"
+update_db() {
+  local edition_id="$1"
+  local file_name="$2"
+  local db_file="$3"
+  
+  local download_url="https://download.maxmind.com/app/geoip_download?edition_id=${edition_id}&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"
+  local tar_file="/config/geoip/${file_name}"
+  local current_sha=""
+  local is_update=false
+  
+  echo "[${edition_id}] Checking for updates..."
+
+  if [ -f "/config/geoip/${db_file}" ]; then
+    current_sha=$(sha256sum "/config/geoip/${db_file}" | awk '{ print $1 }')
+    is_update=true
+  fi
+
+  if ! wget "${download_url}" -O "${tar_file}" &>/dev/null; then
+    echo "[${edition_id}] Error downloading database."
+    return 1
+  fi
+
+  rm -rf "${TEMP_FOLDER}"
+  mkdir -p "${TEMP_FOLDER}"
+
+  if ! tar -zxf "${tar_file}" -C "${TEMP_FOLDER}" &>/dev/null; then
+    echo "[${edition_id}] Error extracting files."
+    rm -f "${tar_file}"
+    return 1
+  fi
+
+  local extracted_file
+  extracted_file=$(find "${TEMP_FOLDER}" -name "${db_file}" -type f 2>/dev/null)
+
+  if [ -z "${extracted_file}" ] || [ ! -f "${extracted_file}" ]; then
+    echo "[${edition_id}] Error: ${db_file} not found in extracted archive."
+    rm -f "${tar_file}"
+    return 1
+  fi
+
+  local new_sha
+  new_sha=$(sha256sum "${extracted_file}" | awk '{ print $1 }')
+
+  if [ "$is_update" = true ] && [ "${current_sha}" = "${new_sha}" ]; then
+    echo "[${edition_id}] No update needed (Checksum: ${new_sha:0:8})"
   else
-    echo "Successfully downloaded files."
-    echo "Extracting.."
-    if ! tar -zxf "/config/geoip/${FILE_NAME_CITY}" -C "${TEMP_FOLDER}" &>/dev/null; then
-      echo "Error extracting files."
-      echo "---------------------------------------------------"
+    mv "${extracted_file}" "/config/geoip/${db_file}"
+    if [ "$is_update" = true ]; then
+        echo "[${edition_id}] Update successful. New Checksum: ${new_sha:0:8}"
     else
-      mmdb_file=$(find "$TEMP_FOLDER" -name "GeoLite2-City.mmdb" -type f)
-      NEW_SHA_CITY=$(sha256sum "${mmdb_file}" | awk '{ print $1 }')
-      echo "Successfully extracted."
-      echo "SHA256 of GeoLite2-City.mmdb: ${NEW_SHA_CITY}"
-    fi
-
-    if [[ "${CURRENT_SHA_CITY}" != "${NEW_SHA_CITY}" ]]; then
-      echo "GeoLite2-City.mmdb SHA mismatch detected. Updating.."
-      mv "${mmdb_file}" /config/geoip/GeoLite2-City.mmdb
-      echo "Successfully downloaded GeoLite2-City.mmdb to /config/geoip/. It is recommended to restart the container."
-      echo "---------------------------------------------------"
-    else
-      echo "No update needed for GeoLite2-City.mmdb"
-      echo "---------------------------------------------------"
+        echo "[${edition_id}] Download successful. Checksum: ${new_sha:0:8}"
     fi
   fi
-else
-  echo "---------------------------------------------------"
-  echo "Downloading GeoLite2-City.mmdb"
-  if ! wget "${DOWNLOAD_URL_CITY}" -O "/config/geoip/${FILE_NAME_CITY}" &>/dev/null; then
-    echo "Error downloading GeoLite2-City.mmdb"
-    echo "---------------------------------------------------"
-  else
-    echo "Successfully downloaded files."
-    echo "Extracting.."
-    if ! tar -zxf "/config/geoip/${FILE_NAME_CITY}" -C "${TEMP_FOLDER}" &>/dev/null; then
-      echo "Error extracting files."
-      echo "---------------------------------------------------"
-    else
-      mmdb_file=$(find "$TEMP_FOLDER" -name "GeoLite2-City.mmdb" -type f)
-      NEW_SHA_CITY=$(sha256sum "${mmdb_file}" | awk '{ print $1 }')
-      echo "Successfully extracted."
-      echo "SHA256 of GeoLite2-City.mmdb: ${NEW_SHA_CITY}"
-    fi
 
-    mv "${mmdb_file}" /config/geoip/GeoLite2-City.mmdb
-    echo "Successfully downloaded GeoLite2-City.mmdb to /config/geoip/. It is recommended to restart the container."
-    echo "---------------------------------------------------"
-  fi
-fi
+  rm -f "${tar_file}"
+  return 0
+}
 
-if [ -f "/config/geoip/GeoLite2-ASN.mmdb" ]; then
-  CURRENT_SHA_ASN=$(sha256sum /config/geoip/GeoLite2-ASN.mmdb | awk '{ print $1 }')
-  echo "---------------------------------------------------"
-  echo "Current GeoLite2-ASN.mmdb SHA256: ${CURRENT_SHA_ASN}"
-  echo "Updating GeoLite2-ASN.mmdb"
-  if ! wget "${DOWNLOAD_URL_ASN}" -O "/config/geoip/${FILE_NAME_ASN}" &>/dev/null; then
-    echo "Error downloading GeoLite2-ASN.mmdb"
-    echo "---------------------------------------------------"
-  else
-    echo "Successfully downloaded files."
-    echo "Extracting.."
-    if ! tar -zxf "/config/geoip/${FILE_NAME_ASN}" -C "${TEMP_FOLDER}" &>/dev/null; then
-      echo "Error extracting files."
-      echo "---------------------------------------------------"
-    else
-      asn_mmdb_file=$(find "$TEMP_FOLDER" -name "GeoLite2-ASN.mmdb" -type f)
-      NEW_SHA_ASN=$(sha256sum "${asn_mmdb_file}" | awk '{ print $1 }')
-      echo "Successfully extracted."
-      echo "SHA256 of GeoLite2-ASN.mmdb: ${NEW_SHA_ASN}"
-    fi
+update_db "GeoLite2-City" "GeoLite2-City.tar.gz" "GeoLite2-City.mmdb"
+update_db "GeoLite2-ASN" "GeoLite2-ASN.tar.gz" "GeoLite2-ASN.mmdb"
 
-    if [[ "${CURRENT_SHA_ASN}" != "${NEW_SHA_ASN}" ]]; then
-      echo "GeoLite2-ASN.mmdb SHA mismatch detected. Updating.."
-      mv "${asn_mmdb_file}" /config/geoip/GeoLite2-ASN.mmdb
-      echo "Successfully downloaded GeoLite2-ASN.mmdb to /config/geoip/. It is recommended to restart the container."
-      echo "---------------------------------------------------"
-    else
-      echo "No update needed for GeoLite2-ASN.mmdb"
-      echo "---------------------------------------------------"
-    fi
-  fi
-else
-  echo "---------------------------------------------------"
-  echo "Downloading GeoLite2-ASN.mmdb"
-  if ! wget "${DOWNLOAD_URL_ASN}" -O "/config/geoip/${FILE_NAME_ASN}" &>/dev/null; then
-    echo "Error downloading GeoLite2-ASN.mmdb"
-    echo "---------------------------------------------------"
-  else
-    echo "Successfully downloaded files."
-    echo "Extracting.."
-    if ! tar -zxf "/config/geoip/${FILE_NAME_ASN}" -C "${TEMP_FOLDER}" &>/dev/null; then
-      echo "Error extracting files."
-      echo "---------------------------------------------------"
-    else
-      asn_mmdb_file=$(find "$TEMP_FOLDER" -name "GeoLite2-ASN.mmdb" -type f)
-      NEW_SHA_ASN=$(sha256sum "${asn_mmdb_file}" | awk '{ print $1 }')
-      echo "Successfully extracted."
-      echo "SHA256 of GeoLite2-ASN.mmdb: ${NEW_SHA_ASN}"
-    fi
-
-    mv "${asn_mmdb_file}" /config/geoip/GeoLite2-ASN.mmdb
-    echo "Successfully downloaded GeoLite2-ASN.mmdb to /config/geoip/. It is recommended to restart the container."
-    echo "---------------------------------------------------"
-  fi
-fi
-
-rm -rf ${TEMP_FOLDER}
-rm "/config/geoip/${FILE_NAME_CITY}"
-rm "/config/geoip/${FILE_NAME_ASN}"
+rm -rf "${TEMP_FOLDER}"

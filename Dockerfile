@@ -3,8 +3,8 @@ FROM alpine:latest
 WORKDIR /usr/src/app
 
 ARG OVERLAY_ARCH
-ARG OVERLAY_VERSION=3.2.1.0
-ARG GOACCESS_VERSION=1.9.4
+ARG OVERLAY_VERSION=3.2.3.0
+ARG GOACCESS_VERSION=1.10.2
 
 ENV CONFIG_DIR="/config" \
     PUID="1000" \
@@ -42,7 +42,7 @@ EXPOSE 7889
 VOLUME [ "/config", "/opt/log" ]
 
 HEALTHCHECK --interval=30s --timeout=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:7889 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:7889 || exit 1
 
 LABEL org.opencontainers.image.source="https://github.com/NiNiyas/docker-goaccess"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"

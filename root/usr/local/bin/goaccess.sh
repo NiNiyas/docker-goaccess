@@ -16,7 +16,7 @@ if [ ! -e "/opt/log/access.log" ]; then
     exit 1
 fi
 
-echo -e '0 0 * * * /usr/sbin/logrotate -s /config/logrotate.status --force --verbose /etc/logrotate.conf\n' >> /tmp/cron
+echo '0 0 * * * /usr/sbin/logrotate -s /config/logrotate.status --force --verbose /etc/logrotate.conf' > /tmp/cron
 
 if [ -n "$MAXMIND_LICENSE_KEY" ]; then
   mkdir -p /config/geoip
@@ -28,7 +28,7 @@ if [ -n "$MAXMIND_LICENSE_KEY" ]; then
     echo "geoip-database /config/geoip/GeoLite2-City.mmdb" >> /config/goaccess.conf
     echo "geoip-database /config/geoip/GeoLite2-ASN.mmdb" >> /config/goaccess.conf
   fi
-  echo -e '0 0 * * SUN /etc/geoip.sh >> /config/geoip/geoip.log 2>&1' >> /tmp/cron
+  echo '0 0 * * SUN /etc/geoip.sh >> /config/geoip/geoip.log 2>&1' >> /tmp/cron
   echo -e "\e[32mWeekly cron job to update geoip databases have been applied.\e[0m"
 else
   if grep -q "geoip-database /config/geoip/GeoLite2-City.mmdb" /config/goaccess.conf; then
@@ -44,7 +44,18 @@ run_args="--config-file=/config/goaccess.conf"
 
 if [ "${INCLUDE_ALL_LOGS:-false}" = true ]; then
   echo -e "\e[33mINCLUDE_ALL_LOGS is enabled. This will likely cause increased memory and cpu usage based on the volume and size of your logs.\e[0m"
-  zcat /opt/log/access.log.*.gz | goaccess - /opt/log/access.log /opt/log/access.log.1 $run_args
+  
+  log_files="/opt/log/access.log"
+  
+  [ -f /opt/log/access.log.1 ] && log_files="$log_files /opt/log/access.log.1"
+  
+  gz_files=$(find /opt/log -maxdepth 1 -name "access.log.*.gz" -type f 2>/dev/null)
+  
+  if [ -n "$gz_files" ]; then
+    zcat /opt/log/access.log.*.gz | goaccess - $log_files $run_args
+  else
+    goaccess $log_files $run_args
+  fi
 else
-  goaccess - /opt/log/access.log $run_args
+  goaccess /opt/log/access.log $run_args
 fi
